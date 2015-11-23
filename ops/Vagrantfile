@@ -1,0 +1,45 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+
+  config.vm.provider "docker" do |docker|
+    docker.force_host_vm = true
+    docker.vagrant_vagrantfile = "./docker-host/Vagrantfile"
+    docker.vagrant_machine = "docker-host"
+  end
+
+  config.vm.define "shortener" do |postgres|
+    postgres.vm.synced_folder ".", "/vagrant", disabled: true
+    postgres.vm.provider "docker" do |docker|
+      docker.name = "shortener"
+      docker.build_dir = "../"
+      docker.dockerfile = "Dockerfile"
+      docker.volumes = ["/vagrant:/opt/tilt-url-shortener"]
+      docker.env = {
+        "POSTGRES_PASSWORD" => "tilt",
+        "POSTGRES_USER" => "tilt",
+        "POSTGRES_DB" => "ctiltit_test",
+        # Use this to test production mode
+        #"MOJO_MODE" => "production",
+      }
+      docker.link("postgres:postgres")
+      docker.ports = ["3000:3000","3001:3001"]
+    end
+  end
+
+  config.vm.define "postgres" do |postgres|
+    postgres.vm.synced_folder ".", "/vagrant", disabled: true
+    postgres.vm.provider "docker" do |docker|
+      docker.image = "postgres:9.4"
+      docker.name = "postgres"
+      docker.env = {
+        "POSTGRES_PASSWORD" => "tilt",
+        "POSTGRES_USER" => "tilt",
+        "POSTGRES_DB" => "ctiltit_test"
+      }
+      docker.ports = ["5432:5432"]
+    end
+  end
+
+end
