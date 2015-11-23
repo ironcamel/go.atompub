@@ -9,22 +9,19 @@ Vagrant.configure(2) do |config|
     docker.vagrant_machine = "docker-host"
   end
 
-  config.vm.define "shortener" do |postgres|
+  config.vm.define "atompub" do |postgres|
     postgres.vm.synced_folder ".", "/vagrant", disabled: true
     postgres.vm.provider "docker" do |docker|
-      docker.name = "shortener"
+      docker.name = "atompub"
       docker.build_dir = "../"
       docker.dockerfile = "Dockerfile"
-      docker.volumes = ["/vagrant:/opt/tilt-url-shortener"]
       docker.env = {
-        "POSTGRES_PASSWORD" => "tilt",
-        "POSTGRES_USER" => "tilt",
-        "POSTGRES_DB" => "ctiltit_test",
-        # Use this to test production mode
-        #"MOJO_MODE" => "production",
+        "POSTGRES_PASSWORD" => "atompub",
+        "POSTGRES_USER" => "atompub",
+        "POSTGRES_DB" => "atompub_test",
       }
       docker.link("postgres:postgres")
-      docker.ports = ["3000:3000","3001:3001"]
+      docker.ports = ["8000:8000"]
     end
   end
 
@@ -34,9 +31,9 @@ Vagrant.configure(2) do |config|
       docker.image = "postgres:9.4"
       docker.name = "postgres"
       docker.env = {
-        "POSTGRES_PASSWORD" => "tilt",
-        "POSTGRES_USER" => "tilt",
-        "POSTGRES_DB" => "ctiltit_test"
+        "POSTGRES_PASSWORD" => "atompub",
+        "POSTGRES_USER" => "atompub",
+        "POSTGRES_DB" => "atompub_test"
       }
       docker.ports = ["5432:5432"]
     end
