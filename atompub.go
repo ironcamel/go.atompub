@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -22,7 +24,18 @@ var r = render.New()
 var db *sql.DB
 
 func main() {
-	port := flag.Int("port", 8000, "the port")
+	port := flag.Int("port", -1, "the port")
+	if *port == -1 {
+		envPort := os.Getenv("GO_ATOMPUB_PORT")
+		if envPort == "" {
+			*port = 8000
+		} else {
+			var err error
+			if *port, err = strconv.Atoi(envPort); err != nil {
+				log.Fatal("Invalid port value: ", envPort)
+			}
+		}
+	}
 	configPath := flag.String("config", "./config.yaml", "path to config file")
 	flag.Parse()
 
@@ -43,6 +56,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/feeds/{feed}", getFeed).Methods("GET")
 	router.HandleFunc("/feeds/{feed}", addEntry).Methods("POST")
+	log.Println("Listening on port", *port)
 	http.ListenAndServe(fmt.Sprint(":", *port), router)
 }
 
@@ -67,7 +81,6 @@ func getFeed(w http.ResponseWriter, req *http.Request) {
 	contentType := "application/atom+xml; type=feed;charset=UTF-8"
 	w.Header().Set("Content-Type", contentType)
 	res, err := xml.Marshal(feedPtr)
-	fmt.Printf("%+v\n", feedPtr.XMLName)
 	w.Write(res)
 }
 
