@@ -1,4 +1,14 @@
 
+## Getting Started
+
+Install go.atompub:
+
+    go get github.com/ironcamel/go.atompub
+
+Then run the server:
+
+    go run atompub.go
+
 To create a new entry:
 
 ```bash
