@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -17,36 +16,37 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/satori/go.uuid"
 	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
-	yaml "gopkg.in/yaml.v2"
 )
 
 var r = render.New()
 var db *sql.DB
 
 func main() {
+	var err error
+
 	var port int
 	envPort := os.Getenv("GO_ATOMPUB_PORT")
 	if envPort == "" {
 		port = 8000
 	} else {
-		var err error
 		if port, err = strconv.Atoi(envPort); err != nil {
 			log.Fatal("Invalid port value: ", envPort)
 		}
 	}
 	flag.IntVar(&port, "port", port, "the port")
-	configPath := flag.String("config", "./config.yaml", "path to config file")
+
+	var dsn string
+	flag.StringVar(&dsn, "dsn", "", "the database dsn")
 	flag.Parse()
 
-	yamlContent, err := ioutil.ReadFile(*configPath)
-	if err != nil {
-		log.Fatal("Could not read config file: ", err)
+	if dsn == "" {
+		dsn := os.Getenv("GO_ATOMPUB_DSN")
+		if dsn == "" {
+			log.Fatal("--dsn flag or GO_ATOMPUB_DSN env var is required")
+		}
 	}
-	config := make(map[string]string)
-	if err = yaml.Unmarshal(yamlContent, config); err != nil {
-		log.Fatal("Could not parse config file: ", err)
-	}
-	if db, err = sql.Open("postgres", config["dsn"]); err != nil {
+
+	if db, err = sql.Open("postgres", dsn); err != nil {
 		log.Fatal("Could not open db: ", err)
 	}
 
