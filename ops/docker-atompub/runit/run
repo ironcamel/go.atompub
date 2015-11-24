@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 
+export GO_ATOMPUB_DSN="user=$POSTGRES_USER password=$POSTGRES_PASSWORD dbname=$POSTGRES_DB"
 exec /opt/go.atompub/go.atompub
