@@ -5,9 +5,13 @@ Install go.atompub:
 
     go get github.com/ironcamel/go.atompub
 
+Create the database:
+
+    psql < ./create-db.sql
+
 Then run the server:
 
-    go run atompub.go
+    go run atompub.go --dsn='...'
 
 To create a new entry:
 

@@ -76,12 +76,7 @@ func getFeed(w http.ResponseWriter, req *http.Request) {
 		r.Text(w, 500, fmt.Sprint("Failed to construct feed: ", err))
 		return
 	}
-	namespace := "http://www.w3.org/2005/Atom"
-	feedPtr.Namespace = &namespace
-	contentType := "application/atom+xml; type=feed;charset=UTF-8"
-	w.Header().Set("Content-Type", contentType)
-	res, err := xml.Marshal(feedPtr)
-	w.Write(res)
+	resXML(w, feedPtr)
 }
 
 func getEntry(w http.ResponseWriter, req *http.Request) {
@@ -100,12 +95,7 @@ func getEntry(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	namespace := "http://www.w3.org/2005/Atom"
-	entryPtr.Namespace = &namespace
-	contentType := "application/atom+xml;type=entry;charset=utf-8"
-	w.Header().Set("Content-Type", contentType)
-	res, err := xml.Marshal(entryPtr)
-	w.Write(res)
+	resXML(w, entryPtr)
 }
 
 func appendEntries(feed *atom.XMLFeed) error {
@@ -134,6 +124,27 @@ func appendEntries(feed *atom.XMLFeed) error {
 	}
 	feed.Entries = entries
 	return nil
+}
+
+func resXML(w http.ResponseWriter, data interface{}) {
+	var type1 string
+	namespace := "http://www.w3.org/2005/Atom"
+	switch x := data.(type) {
+	case *atom.XMLEntry:
+		type1 = "entry"
+		x.Namespace = &namespace
+	case *atom.XMLFeed:
+		type1 = "feed"
+		x.Namespace = &namespace
+	}
+	cont := fmt.Sprintf("application/atom+xml;type=%s;charset=utf-8", type1)
+	w.Header().Set("Content-Type", cont)
+	res, err := xml.Marshal(data)
+	if err != nil {
+		r.Text(w, 500, fmt.Sprint("Failed to serialize xml: ", err))
+	} else {
+		w.Write(res)
+	}
 }
 
 func entryFromRow(row interface{}) (*atom.XMLEntry, error) {
