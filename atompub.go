@@ -72,7 +72,7 @@ func getFeed(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	if err := appendEntries(feedPtr); err != nil {
+	if err := populateFeed(feedPtr, req.FormValue("start_after")); err != nil {
 		r.Text(w, 500, fmt.Sprint("Failed to construct feed: ", err))
 		return
 	}
@@ -80,12 +80,7 @@ func getFeed(w http.ResponseWriter, req *http.Request) {
 }
 
 func getEntry(w http.ResponseWriter, req *http.Request) {
-	entryId := mux.Vars(req)["entry"]
-	row := db.QueryRow(
-		`select id, title, content from atom_entry where id = $1`,
-		entryId,
-	)
-	entryPtr, err := entryFromRow(row)
+	entryPtr, err := findEntry(mux.Vars(req)["entry"])
 	if err != nil {
 		if err == sql.ErrNoRows {
 			r.Text(w, 404, "No such entry")
@@ -98,14 +93,28 @@ func getEntry(w http.ResponseWriter, req *http.Request) {
 	resXML(w, entryPtr)
 }
 
-func appendEntries(feed *atom.XMLFeed) error {
+func findEntry(id string) (*atom.XMLEntry, error) {
+	row := db.QueryRow(
+		`select id, title, content, order_id from atom_entry where id = $1`, id)
+	return entryFromRow(row)
+}
+
+func populateFeed(feed *atom.XMLFeed, startAfter string) error {
+	minId := 0
+	if startAfter != "" {
+		entry, err := findEntry(startAfter)
+		if err == nil {
+			minId = *entry.IntId
+		}
+	}
 	rows, err := db.Query(
-		`select id, title, content
+		`select id, title, content, order_id
 		from atom_entry
 		where feed_title = $1
+		and order_id > $2
 		order by order_id
 		limit 100`,
-		feed.Title.Raw,
+		feed.Title.Raw, minId,
 	)
 	defer rows.Close()
 	if err != nil {
@@ -149,13 +158,14 @@ func resXML(w http.ResponseWriter, data interface{}) {
 
 func entryFromRow(row interface{}) (*atom.XMLEntry, error) {
 	var id, title, content string
+	var orderId int
 	var err error
 
 	switch r := row.(type) {
 	case *sql.Row:
-		err = r.Scan(&id, &title, &content)
+		err = r.Scan(&id, &title, &content, &orderId)
 	case *sql.Rows:
-		err = r.Scan(&id, &title, &content)
+		err = r.Scan(&id, &title, &content, &orderId)
 	}
 	if err != nil {
 		return nil, err
@@ -163,7 +173,13 @@ func entryFromRow(row interface{}) (*atom.XMLEntry, error) {
 
 	xmlTitle := atom.XMLTitle{Raw: title}
 	xmlContent := atom.XMLEntryContent{Raw: content}
-	return &atom.XMLEntry{Id: &id, Title: &xmlTitle, Content: &xmlContent}, nil
+	entry := atom.XMLEntry{
+		Id:      &id,
+		Title:   &xmlTitle,
+		Content: &xmlContent,
+		IntId:   &orderId,
+	}
+	return &entry, nil
 }
 
 func addEntry(w http.ResponseWriter, req *http.Request) {
