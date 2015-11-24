@@ -29,7 +29,7 @@ Vagrant.configure(2) do |config|
         "POSTGRES_USER" => "atompub",
         "POSTGRES_DB" => "atompub_test",
       }
-      #docker.link("postgres:postgres")
+      docker.link("postgres:postgres")
       docker.ports = ["8000:8000"]
     end
   end
