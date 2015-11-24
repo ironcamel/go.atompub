@@ -55,6 +55,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/feeds/{feed}", getFeed).Methods("GET")
 	router.HandleFunc("/feeds/{feed}", addEntry).Methods("POST")
+	router.HandleFunc("/feeds/{feed}/entries/{entry}", getEntry).Methods("GET")
 	log.Println("Listening on port", port)
 	http.ListenAndServe(fmt.Sprint(":", port), router)
 }
@@ -83,9 +84,37 @@ func getFeed(w http.ResponseWriter, req *http.Request) {
 	w.Write(res)
 }
 
+func getEntry(w http.ResponseWriter, req *http.Request) {
+	entryId := mux.Vars(req)["entry"]
+	row := db.QueryRow(
+		`select id, title, content from atom_entry where id = $1`,
+		entryId,
+	)
+	entryPtr, err := entryFromRow(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			r.Text(w, 404, "No such entry")
+			return
+		} else {
+			r.Text(w, 500, fmt.Sprint("Failed to get entry: ", err))
+			return
+		}
+	}
+	namespace := "http://www.w3.org/2005/Atom"
+	entryPtr.Namespace = &namespace
+	contentType := "application/atom+xml;type=entry;charset=utf-8"
+	w.Header().Set("Content-Type", contentType)
+	res, err := xml.Marshal(entryPtr)
+	w.Write(res)
+}
+
 func appendEntries(feed *atom.XMLFeed) error {
 	rows, err := db.Query(
-		`select id, title, content from atom_entry where feed_title = $1`,
+		`select id, title, content
+		from atom_entry
+		where feed_title = $1
+		order by order_id
+		limit 100`,
 		feed.Title.Raw,
 	)
 	defer rows.Close()
@@ -94,20 +123,36 @@ func appendEntries(feed *atom.XMLFeed) error {
 	}
 	var entries []atom.XMLEntry
 	for rows.Next() {
-		var id, title, content string
-		if err := rows.Scan(&id, &title, &content); err != nil {
+		entry, err := entryFromRow(rows)
+		if err != nil {
 			return err
 		}
-		xmlTitle := atom.XMLTitle{Raw: title}
-		xmlContent := atom.XMLEntryContent{Raw: content}
-		entry := atom.XMLEntry{Id: &id, Title: &xmlTitle, Content: &xmlContent}
-		entries = append(entries, entry)
+		entries = append(entries, *entry)
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
 	feed.Entries = entries
 	return nil
+}
+
+func entryFromRow(row interface{}) (*atom.XMLEntry, error) {
+	var id, title, content string
+	var err error
+
+	switch r := row.(type) {
+	case *sql.Row:
+		err = r.Scan(&id, &title, &content)
+	case *sql.Rows:
+		err = r.Scan(&id, &title, &content)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	xmlTitle := atom.XMLTitle{Raw: title}
+	xmlContent := atom.XMLEntryContent{Raw: content}
+	return &atom.XMLEntry{Id: &id, Title: &xmlTitle, Content: &xmlContent}, nil
 }
 
 func addEntry(w http.ResponseWriter, req *http.Request) {
