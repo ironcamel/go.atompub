@@ -40,7 +40,7 @@ func main() {
 	flag.Parse()
 
 	if dsn == "" {
-		dsn := os.Getenv("GO_ATOMPUB_DSN")
+		dsn = os.Getenv("GO_ATOMPUB_DSN")
 		if dsn == "" {
 			log.Fatal("--dsn flag or GO_ATOMPUB_DSN env var is required")
 		}
@@ -50,7 +50,7 @@ func main() {
 		log.Fatal("Could not open db: ", err)
 	}
 
-	fmt.Println(time.Now().Format(time.RFC3339))
+	log.Println(time.Now().Format(time.RFC3339))
 
 	router := mux.NewRouter()
 	router.HandleFunc("/feeds/{feed}", getFeed).Methods("GET")

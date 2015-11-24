@@ -1,0 +1,52 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+
+  config.vm.provider "docker" do |docker|
+    docker.force_host_vm = true
+    docker.vagrant_vagrantfile = "./docker-host/Vagrantfile"
+    docker.vagrant_machine = "docker-host"
+  end
+
+  config.vm.define "atompub-builder" do |postgres|
+    postgres.vm.synced_folder ".", "/vagrant", disabled: true
+    postgres.vm.provider "docker" do |docker|
+      docker.name = "atompub-builder"
+      docker.image = "golang:onbuild"
+      docker.volumes = ["/vagrant:/go/src/github.com/ironcamel/go.atompub"]
+    end
+  end
+
+  config.vm.define "atompub" do |postgres|
+    postgres.vm.synced_folder ".", "/vagrant", disabled: true
+    postgres.vm.provider "docker" do |docker|
+      docker.name = "atompub"
+      docker.build_dir = "../"
+      docker.dockerfile = "Dockerfile"
+      docker.volumes = ["/vagrant:/opt/vagrant/"]
+      docker.env = {
+        "POSTGRES_PASSWORD" => "atompub",
+        "POSTGRES_USER" => "atompub",
+        "POSTGRES_DB" => "atompub_test",
+      }
+      docker.link("postgres:postgres")
+      docker.ports = ["8000:8000"]
+    end
+  end
+
+  config.vm.define "postgres" do |postgres|
+    postgres.vm.synced_folder ".", "/vagrant", disabled: true
+    postgres.vm.provider "docker" do |docker|
+      docker.image = "postgres:9.4"
+      docker.name = "postgres"
+      docker.env = {
+        "POSTGRES_PASSWORD" => "atompub",
+        "POSTGRES_USER" => "atompub",
+        "POSTGRES_DB" => "atompub_test"
+      }
+      docker.ports = ["5432:5432"]
+    end
+  end
+
+end

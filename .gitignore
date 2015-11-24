@@ -1,0 +1,4 @@
+bin
+ops/.vagrant
+ops/docker-host/.vagrant
+log
