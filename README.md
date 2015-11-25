@@ -25,8 +25,15 @@ curl -d '
 
 That adds a new entry to a feed titled widgets.
 If that feed didn't exist before, it will be created for you.
-To retrieve the widgets feed, make a HTTP GET request:
+You can retrieve the widgets feed like so:
 
 ```bash
 curl http://localhost:8000/feeds/widgets
 ```
+
+Clients can request only entries that came after the last entry they processed.
+They can do this by providing the id of the last message as the start-after
+query parameter:
+
+    $ curl http://localhost/atombus/feeds/widgets?start-after=42
+
