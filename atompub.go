@@ -13,7 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ironcamel/go.atom"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/satori/go.uuid"
 	"github.com/unrolled/render" // or "gopkg.in/unrolled/render.v1"
 )
@@ -200,8 +200,13 @@ func insertEntry(entry *atom.XMLEntry, feedTitle string) (*sql.Result, error) {
 	_, err := findFeed(feedTitle)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			if _, err = insertFeed(feedTitle); err != nil {
-				return nil, err
+			err = insertFeed(feedTitle)
+			if err != nil {
+				pqerr, ok := err.(*pq.Error)
+				// gracefully handle race condition
+				if !(ok && pqerr.Code.Name() == "unique_violation") {
+					return nil, err
+				}
 			}
 		} else {
 			return nil, err
@@ -239,11 +244,11 @@ func findFeed(title string) (*atom.XMLFeed, error) {
 	return &feed, nil
 }
 
-func insertFeed(title string) (string, error) {
+func insertFeed(title string) error {
 	id := genId()
 	_, err := db.Exec(
 		`insert into atom_feed (id, title) values ($1, $2)`, id, title)
-	return id, err
+	return err
 }
 
 func genId() string {
