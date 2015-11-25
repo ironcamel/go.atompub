@@ -78,7 +78,11 @@ func getFeed(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	if err := populateFeed(feedPtr, req.FormValue("start-after")); err != nil {
+	startAfter := req.FormValue("start-after")
+	if startAfter == "" {
+		startAfter = req.FormValue("start_after")
+	}
+	if err := populateFeed(feedPtr, startAfter); err != nil {
 		r.Text(w, 500, fmt.Sprint("Failed to construct feed: ", err))
 		return
 	}
