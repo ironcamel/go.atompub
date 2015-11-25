@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/syslog"
 	"net/http"
 	"os"
 	"strconv"
@@ -23,6 +24,10 @@ var db *sql.DB
 
 func main() {
 	var err error
+	syslogWriter, err := syslog.New(syslog.LOG_INFO, "go.atompub")
+	if err == nil {
+		log.SetOutput(syslogWriter)
+	}
 
 	var port int
 	envPort := os.Getenv("GO_ATOMPUB_PORT")
