@@ -197,18 +197,10 @@ func addEntry(w http.ResponseWriter, req *http.Request) {
 }
 
 func insertEntry(entry *atom.XMLEntry, feedTitle string) (*sql.Result, error) {
-	_, err := findFeed(feedTitle)
+	err := insertFeed(feedTitle)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			err = insertFeed(feedTitle)
-			if err != nil {
-				pqerr, ok := err.(*pq.Error)
-				// gracefully handle race condition
-				if !(ok && pqerr.Code.Name() == "unique_violation") {
-					return nil, err
-				}
-			}
-		} else {
+		pqerr, ok := err.(*pq.Error)
+		if !(ok && pqerr.Code.Name() == "unique_violation") {
 			return nil, err
 		}
 	}
