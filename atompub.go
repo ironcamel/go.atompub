@@ -61,6 +61,7 @@ func main() {
 	router.HandleFunc("/feeds/{feed}", getFeed).Methods("GET")
 	router.HandleFunc("/feeds/{feed}", addEntry).Methods("POST")
 	router.HandleFunc("/feeds/{feed}/entries/{entry}", getEntry).Methods("GET")
+	router.HandleFunc("/status", getStatus).Methods("GET")
 	log.Println("Listening on port", port)
 	http.ListenAndServe(fmt.Sprint(":", port), router)
 }
@@ -96,6 +97,24 @@ func getEntry(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	resXML(w, entryPtr)
+}
+
+func addEntry(w http.ResponseWriter, req *http.Request) {
+	entry, err := atom.DecodeEntry(req.Body)
+	if err != nil {
+		r.Text(w, 400, fmt.Sprint("could not parse xml: ", err))
+		return
+	}
+	feedTitle := mux.Vars(req)["feed"]
+	if _, err := insertEntry(entry, feedTitle); err != nil {
+		r.Text(w, 500, fmt.Sprint("failed to save entry: ", err))
+		return
+	}
+	r.XML(w, 201, entry)
+}
+
+func getStatus(w http.ResponseWriter, req *http.Request) {
+	r.Text(w, 200, "ok")
 }
 
 func findEntry(id string) (*atom.XMLEntry, error) {
@@ -185,20 +204,6 @@ func entryFromRow(row interface{}) (*atom.XMLEntry, error) {
 		IntId:   &orderId,
 	}
 	return &entry, nil
-}
-
-func addEntry(w http.ResponseWriter, req *http.Request) {
-	entry, err := atom.DecodeEntry(req.Body)
-	if err != nil {
-		r.Text(w, 400, fmt.Sprint("could not parse xml: ", err))
-		return
-	}
-	feedTitle := mux.Vars(req)["feed"]
-	if _, err := insertEntry(entry, feedTitle); err != nil {
-		r.Text(w, 500, fmt.Sprint("failed to save entry: ", err))
-		return
-	}
-	r.XML(w, 201, entry)
 }
 
 func insertEntry(entry *atom.XMLEntry, feedTitle string) (*sql.Result, error) {
