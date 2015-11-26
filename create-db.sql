@@ -28,3 +28,19 @@ add constraint atom_entry_feed_title_fkey
 FOREIGN KEY (feed_title) REFERENCES atom_feed(title) ON UPDATE CASCADE;
 
 create index atom_entry_feed_title_idx on atom_entry (feed_title);
+
+create table atom_feed_link (
+    id serial primary key,
+    feed_id text not null,
+    href text not null,
+    rel text,
+    hreflang text,
+    title text,
+    length int
+);
+
+alter table atom_feed_link
+add constraint atom_feed_link_feed_id_fkey
+FOREIGN KEY (feed_id) REFERENCES atom_feed(id)
+on update CASCADE on delete CASCADE;
+

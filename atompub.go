@@ -21,6 +21,7 @@ import (
 
 var r = render.New()
 var db *sql.DB
+var baseURL string = os.Getenv("GO_ATOMPUB_BASE_URL")
 
 func main() {
 	var err error
@@ -43,6 +44,10 @@ func main() {
 	var dsn string
 	flag.StringVar(&dsn, "dsn", "", "the database dsn")
 	flag.Parse()
+
+	if baseURL == "" {
+		baseURL = fmt.Sprint("http://localhost:", port)
+	}
 
 	if dsn == "" {
 		dsn = os.Getenv("GO_ATOMPUB_DSN")
@@ -86,6 +91,17 @@ func getFeed(w http.ResponseWriter, req *http.Request) {
 		r.Text(w, 500, fmt.Sprint("Failed to construct feed: ", err))
 		return
 	}
+
+	numEntries := len(feedPtr.Entries)
+	if numEntries > 0 {
+		lastEntryId := feedPtr.Entries[numEntries-1].Id
+		href := fmt.Sprintf("%s/feeds/%s?start-after=%s",
+			baseURL, feedPtr.Title.Raw, *lastEntryId)
+		rel := "next"
+		nextLink := atom.XMLLink{Href: &href, Rel: &rel}
+		feedPtr.Links = []atom.XMLLink{nextLink}
+	}
+
 	resXML(w, feedPtr)
 }
 
