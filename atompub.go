@@ -1,15 +1,12 @@
-package main
+package atompub
 
 import (
 	"database/sql"
 	"encoding/xml"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/ironcamel/go.atom"
@@ -22,48 +19,40 @@ var r = render.New()
 var db *sql.DB
 var baseURL string = os.Getenv("GO_ATOMPUB_BASE_URL")
 
-func main() {
+type AtomPub struct {
+	Port    int
+	DSN     string
+	BaseURL string
+}
+
+func (ap *AtomPub) Start() {
 	var err error
 
-	var port int
-	envPort := os.Getenv("GO_ATOMPUB_PORT")
-	if envPort == "" {
-		port = 8000
-	} else {
-		if port, err = strconv.Atoi(envPort); err != nil {
-			log.Fatal("Invalid port value: ", envPort)
-		}
+	if ap.DSN == "" {
+		log.Fatal("Database DSN is required")
 	}
-	flag.IntVar(&port, "port", port, "the port")
-
-	var dsn string
-	flag.StringVar(&dsn, "dsn", "", "the database dsn")
-	flag.Parse()
-
-	if baseURL == "" {
-		baseURL = fmt.Sprint("http://localhost:", port)
-	}
-
-	if dsn == "" {
-		dsn = os.Getenv("GO_ATOMPUB_DSN")
-		if dsn == "" {
-			log.Fatal("--dsn flag or GO_ATOMPUB_DSN env var is required")
-		}
-	}
-
-	if db, err = sql.Open("postgres", dsn); err != nil {
+	if db, err = sql.Open("postgres", ap.DSN); err != nil {
 		log.Fatal("Could not open db: ", err)
 	}
 
-	log.Println(time.Now().Format(time.RFC3339))
+	if ap.Port == 0 {
+		ap.Port = 8000
+	}
+
+	if ap.BaseURL == "" {
+		ap.BaseURL = fmt.Sprint("http://localhost:", ap.Port)
+	}
+	baseURL = ap.BaseURL
+
+	//log.Println(time.Now().Format(time.RFC3339))
 
 	router := mux.NewRouter()
 	router.HandleFunc("/feeds/{feed}", getFeed).Methods("GET")
 	router.HandleFunc("/feeds/{feed}", addEntry).Methods("POST")
 	router.HandleFunc("/feeds/{feed}/entries/{entry}", getEntry).Methods("GET")
 	router.HandleFunc("/status", getStatus).Methods("GET")
-	log.Println("Listening on port", port)
-	http.ListenAndServe(fmt.Sprint(":", port), router)
+	log.Println("AtomPub server listening on port", ap.Port)
+	http.ListenAndServe(fmt.Sprint(":", ap.Port), router)
 }
 
 func getFeed(w http.ResponseWriter, req *http.Request) {
