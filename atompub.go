@@ -20,7 +20,7 @@ var db *sql.DB
 var baseURL string = os.Getenv("GO_ATOMPUB_BASE_URL")
 
 type AtomPub struct {
-	Port    int
+	Addr    string
 	DSN     string
 	BaseURL string
 }
@@ -35,12 +35,12 @@ func (ap *AtomPub) Start() {
 		log.Fatal("Could not open db: ", err)
 	}
 
-	if ap.Port == 0 {
-		ap.Port = 8000
+	if ap.Addr == "" {
+		ap.Addr = ":8000"
 	}
 
 	if ap.BaseURL == "" {
-		ap.BaseURL = fmt.Sprint("http://localhost:", ap.Port)
+		ap.BaseURL = fmt.Sprint("http://localhost", ap.Addr)
 	}
 	baseURL = ap.BaseURL
 
@@ -51,8 +51,8 @@ func (ap *AtomPub) Start() {
 	router.HandleFunc("/feeds/{feed}", addEntry).Methods("POST")
 	router.HandleFunc("/feeds/{feed}/entries/{entry}", getEntry).Methods("GET")
 	router.HandleFunc("/status", getStatus).Methods("GET")
-	log.Println("AtomPub server listening on port", ap.Port)
-	http.ListenAndServe(fmt.Sprint(":", ap.Port), router)
+	log.Println("AtomPub server listening on", ap.Addr)
+	http.ListenAndServe(ap.Addr, router)
 }
 
 func getFeed(w http.ResponseWriter, req *http.Request) {
