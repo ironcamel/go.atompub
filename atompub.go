@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 
@@ -20,9 +21,10 @@ var db *sql.DB
 var baseURL string = os.Getenv("GO_ATOMPUB_BASE_URL")
 
 type AtomPub struct {
-	Addr    string
-	DSN     string
-	BaseURL string
+	BaseURL  string
+	DSN      string
+	Listener net.Listener
+	Port     int
 }
 
 func (ap *AtomPub) Start() {
@@ -35,14 +37,17 @@ func (ap *AtomPub) Start() {
 		log.Fatal("Could not open db: ", err)
 	}
 
-	if ap.Addr == "" {
-		ap.Addr = ":8000"
+	if ap.Listener == nil {
+		if ap.Port == 0 {
+			ap.Listener, _ = net.Listen("tcp", ":8000")
+		} else {
+			ap.Listener, _ = net.Listen("tcp", fmt.Sprint(":", ap.Port))
+		}
 	}
 
 	if ap.BaseURL == "" {
-		ap.BaseURL = fmt.Sprint("http://localhost", ap.Addr)
+		baseURL = "http://localhost"
 	}
-	baseURL = ap.BaseURL
 
 	//log.Println(time.Now().Format(time.RFC3339))
 
@@ -51,8 +56,8 @@ func (ap *AtomPub) Start() {
 	router.HandleFunc("/feeds/{feed}", addEntry).Methods("POST")
 	router.HandleFunc("/feeds/{feed}/entries/{entry}", getEntry).Methods("GET")
 	router.HandleFunc("/status", getStatus).Methods("GET")
-	log.Println("AtomPub server listening on", ap.Addr)
-	http.ListenAndServe(ap.Addr, router)
+	log.Println("AtomPub server listening on something")
+	http.Serve(ap.Listener, router)
 }
 
 func getFeed(w http.ResponseWriter, req *http.Request) {
