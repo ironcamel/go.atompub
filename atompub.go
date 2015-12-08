@@ -46,8 +46,9 @@ func (ap *AtomPub) Start() {
 	}
 
 	if ap.BaseURL == "" {
-		baseURL = "http://localhost"
+		ap.BaseURL = "http://localhost"
 	}
+	baseURL = ap.BaseURL
 
 	//log.Println(time.Now().Format(time.RFC3339))
 
