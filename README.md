@@ -7,11 +7,11 @@ Install go.atompub:
 
 Create the database:
 
-    psql < ./create-db.sql
+    psql atompub < ./create-db.sql
 
 Then run the server:
 
-    GO_ATOMPUB_DSN='postgres://...' go run ./cmd/go.atompub/main.go
+    go run ./cmd/go.atompub/main.go
 
 To create a new entry:
 

@@ -31,10 +31,14 @@ func (ap *AtomPub) Start() {
 	var err error
 
 	if ap.DSN == "" {
-		log.Fatal("Database DSN is required")
+		ap.DSN = "postgres://localhost/atompub?sslmode=disable"
 	}
 	if db, err = sql.Open("postgres", ap.DSN); err != nil {
 		log.Fatal("Could not open db: ", err)
+	}
+	_, err = db.Query("select 1")
+	if err != nil {
+		log.Fatal("Could not talk to db: ", err)
 	}
 
 	if ap.Listener == nil {
@@ -57,7 +61,7 @@ func (ap *AtomPub) Start() {
 	router.HandleFunc("/feeds/{feed}", addEntry).Methods("POST")
 	router.HandleFunc("/feeds/{feed}/entries/{entry}", getEntry).Methods("GET")
 	router.HandleFunc("/status", getStatus).Methods("GET")
-	log.Println("AtomPub server listening on something")
+	log.Println("AtomPub server starting ...")
 	http.Serve(ap.Listener, router)
 }
 
