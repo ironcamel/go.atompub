@@ -11,7 +11,7 @@ Create the database:
 
 Then run the server:
 
-    go run atompub.go --dsn='...'
+    GO_ATOMPUB_DSN='postgres://...' go run ./cmd/go.atompub/main.go
 
 To create a new entry:
 
