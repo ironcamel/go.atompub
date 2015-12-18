@@ -3,14 +3,14 @@ package atompub
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/ironcamel/go.atompub"
+	"github.com/ironcamel/go.atom"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
@@ -24,31 +24,29 @@ func TestCreateFeed(t *testing.T) {
 	url := _url("/feeds/" + feedTitle)
 
 	res, err := http.Get(url)
-	if err != nil || res.StatusCode != 404 {
-		t.Error("expected 404 for", url, err, res)
-		body, _ := ioutil.ReadAll(res.Body)
-		t.Error(string(body))
-	}
+	assert.Nil(t, err)
+	assert.Equal(t, res.StatusCode, 404)
 
 	entry := "<entry><title>foo</title><content>bar</content></entry>"
 	buf := bytes.NewBufferString(entry)
 	res, err = http.Post(url, "application/atom+xml", buf)
-	if err != nil || res.StatusCode != 201 {
-		t.Error("could not create feed", err, res)
-	}
+	assert.Nil(t, err)
+	assert.Equal(t, res.StatusCode, 201, "created feed")
 
 	res, err = http.Get(url)
-	if err != nil || res.StatusCode != 200 {
-		t.Error("could not get feed", err, res)
-	}
-	body, _ := ioutil.ReadAll(res.Body)
-	fmt.Println(string(body))
+	assert.Nil(t, err)
+	assert.Equal(t, res.StatusCode, 200, "got feed")
+
+	feed, err := atom.DecodeFeed(res.Body)
+	assert.Nil(t, err, "parsed feed")
+	assert.Equal(t, len(feed.Entries), 1, "got 1 entry")
+	assert.Equal(t, feed.Title.Raw, feedTitle, "feed title")
 }
 
 func startServer() {
 	go func() {
 		dsn := "postgres://localhost/atompub?sslmode=disable"
-		server := atompub.AtomPub{DSN: dsn}
+		server := AtomPub{DSN: dsn}
 		server.Start()
 	}()
 	for {
