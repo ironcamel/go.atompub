@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/ironcamel/go.atom"
@@ -53,8 +54,6 @@ func (ap *AtomPub) Start() {
 		ap.BaseURL = "http://localhost"
 	}
 	baseURL = ap.BaseURL
-
-	//log.Println(time.Now().Format(time.RFC3339))
 
 	router := mux.NewRouter()
 	router.HandleFunc("/feeds/{feed}", getFeed).Methods("GET")
@@ -133,7 +132,11 @@ func getStatus(w http.ResponseWriter, req *http.Request) {
 
 func findEntry(id string) (*atom.XMLEntry, error) {
 	row := db.QueryRow(
-		`select id, title, content, order_id from atom_entry where id = $1`, id)
+		`select id, title, content, order_id, updated
+		from atom_entry
+		where id = $1`,
+		id,
+	)
 	return entryFromRow(row)
 }
 
@@ -146,7 +149,7 @@ func populateFeed(feed *atom.XMLFeed, startAfter string) error {
 		}
 	}
 	rows, err := db.Query(
-		`select id, title, content, order_id
+		`select id, title, content, order_id, updated
 		from atom_entry
 		where feed_title = $1
 		and order_id > $2
@@ -194,16 +197,22 @@ func resXML(w http.ResponseWriter, data interface{}) {
 	}
 }
 
+func formatTime(t time.Time) *string {
+	timeStr := t.Format(time.RFC3339)
+	return &timeStr
+}
+
 func entryFromRow(row interface{}) (*atom.XMLEntry, error) {
 	var id, title, content string
 	var orderId int
+	var updated time.Time
 	var err error
 
 	switch r := row.(type) {
 	case *sql.Row:
-		err = r.Scan(&id, &title, &content, &orderId)
+		err = r.Scan(&id, &title, &content, &orderId, &updated)
 	case *sql.Rows:
-		err = r.Scan(&id, &title, &content, &orderId)
+		err = r.Scan(&id, &title, &content, &orderId, &updated)
 	}
 	if err != nil {
 		return nil, err
@@ -216,6 +225,7 @@ func entryFromRow(row interface{}) (*atom.XMLEntry, error) {
 		Title:   &xmlTitle,
 		Content: &xmlContent,
 		IntId:   &orderId,
+		Updated: formatTime(updated),
 	}
 	return &entry, nil
 }
@@ -249,14 +259,17 @@ func insertEntry(entry *atom.XMLEntry, feedTitle string) (*sql.Result, error) {
 }
 
 func findFeed(title string) (*atom.XMLFeed, error) {
-	row := db.QueryRow(`select id from atom_feed where title = $1`, title)
+	row := db.QueryRow(
+		`select id, updated from atom_feed where title = $1`, title)
 	var id string
-	if err := row.Scan(&id); err != nil {
+	var updated time.Time
+	if err := row.Scan(&id, &updated); err != nil {
 		return nil, err
 	}
 	feed := atom.XMLFeed{Id: &id}
 	xmlTitle := atom.XMLTitle{Raw: title}
 	feed.Title = &xmlTitle
+	feed.Updated = formatTime(updated)
 	return &feed, nil
 }
 
