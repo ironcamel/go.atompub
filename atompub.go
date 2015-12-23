@@ -42,12 +42,13 @@ func (ap *AtomPub) Start() {
 		log.Fatal("Could not talk to db: ", err)
 	}
 
+	isCustomListener := true
 	if ap.Listener == nil {
+		isCustomListener = false
 		if ap.Port == 0 {
-			ap.Listener, _ = net.Listen("tcp", ":8000")
-		} else {
-			ap.Listener, _ = net.Listen("tcp", fmt.Sprint(":", ap.Port))
+			ap.Port = 8000
 		}
+		ap.Listener, _ = net.Listen("tcp", fmt.Sprint(":", ap.Port))
 	}
 
 	if ap.BaseURL == "" {
@@ -60,7 +61,12 @@ func (ap *AtomPub) Start() {
 	router.HandleFunc("/feeds/{feed}", addEntry).Methods("POST")
 	router.HandleFunc("/feeds/{feed}/entries/{entry}", getEntry).Methods("GET")
 	router.HandleFunc("/status", getStatus).Methods("GET")
-	log.Println("AtomPub server starting ...")
+	if isCustomListener {
+		// If a custom listener was passed in, we don't know the port or socket
+		log.Println("AtomPub server starting ...")
+	} else {
+		log.Println("AtomPub server listening on port", ap.Port, "...")
+	}
 	http.Serve(ap.Listener, router)
 }
 
