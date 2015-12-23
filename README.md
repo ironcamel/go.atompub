@@ -13,6 +13,8 @@ Then run the server:
 
     go run ./cmd/go.atompub/main.go
 
+## Usage
+
 To create a new entry:
 
 ```bash
@@ -35,5 +37,10 @@ Clients can request only entries that came after the last entry they processed.
 They can do this by providing the id of the last message as the start-after
 query parameter:
 
-    $ curl http://localhost/atombus/feeds/widgets?start-after=42
+```bash
+curl http://localhost/atombus/feeds/widgets?start-after=42
+```
 
+## API Documentation
+
+See: https://godoc.org/github.com/ironcamel/go.atompub
