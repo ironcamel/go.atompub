@@ -33,9 +33,25 @@ You can retrieve the widgets feed like so:
 curl http://localhost:8000/feeds/widgets
 ```
 
-Clients can request only entries that came after the last entry they processed.
-They can do this by providing the id of the last message as the start-after
-query parameter:
+This will return an Atom feed:
+
+```xml
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>urn:uuid:12c428cf-49e2-4f90-9ac9-e6fffb25d73b</id>
+  <title>widgets</title>
+  <updated>2016-04-05T01:15:07Z</updated>
+  <link href="http://localhost:8000/feeds/widgets?start-after=urn:uuid:13214e6b-3962-482b-bb1b-570790e4ff67" rel="next"/>
+  <entry>
+    <id>urn:uuid:13214e6b-3962-482b-bb1b-570790e4ff67</id>
+    <title>allo</title>
+    <updated>2016-04-05T01:15:07Z</updated>
+    <content>{"foo":"bar"}</content>
+  </entry>
+</feed>
+```
+
+Clients can request entries that came after the last entry they processed by
+providing the id of the last entry as the start-after query parameter:
 
 ```bash
 curl http://localhost/atombus/feeds/widgets?start-after=42

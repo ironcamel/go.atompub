@@ -121,12 +121,12 @@ func getEntry(w http.ResponseWriter, req *http.Request) {
 func addEntry(w http.ResponseWriter, req *http.Request) {
 	entry, err := atom.DecodeEntry(req.Body)
 	if err != nil {
-		r.Text(w, 400, fmt.Sprint("could not parse xml: ", err))
+		r.Text(w, 400, fmt.Sprint("Could not parse xml: ", err))
 		return
 	}
 	feedTitle := mux.Vars(req)["feed"]
 	if _, err := insertEntry(entry, feedTitle); err != nil {
-		r.Text(w, 500, fmt.Sprint("failed to save entry: ", err))
+		r.Text(w, 500, fmt.Sprint("Failed to save entry: ", err))
 		return
 	}
 	r.XML(w, 201, entry)
